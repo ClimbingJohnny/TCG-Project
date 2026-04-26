@@ -1,0 +1,110 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id    Int @id @default(autoincrement())
+  name  String @unique
+  password String
+  deck Deck[]
+  admin Boolean @default(false)
+  joinedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+}
+
+model Deck {
+  id Int @id @default(autoincrement())
+  name String
+  description String?
+  userId Int 
+  user    User       @relation(fields: [userId], references: [id])
+  cards   DeckCard[]
+
+  @@index([userId])
+  @@index([userId, name])
+}
+
+model Card {
+  id        Int @id @default(autoincrement())
+  name      String
+  kind    Int
+  flavorText String?
+  effect Json?
+
+  regulation Int @default(0) 
+  pack String
+  createdAt DateTime @default(now())
+
+  character Character?
+  spell     Spell?
+  trap      Trap?
+
+  deckCards DeckCard[]
+
+  @@index([name])
+  @@index([kind])
+}
+//上記のコードは、カードゲームのデータモデルを定義しています。Cardモデルは、カードの基本情報を持ち、Character、Spell、Trapモデルは、それぞれのカードの特定の属性を持っています。DeckCardモデルは、デッキとカードの関係を表しています。
+model Character {
+  id      Int  @id @default(autoincrement())
+  cardId  Int  @unique
+  level   Int
+  power   Int
+
+  card    Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  tribes  CharacterTribe[]
+}
+// 種族テーブル
+model Tribe {
+  id Int @id @default(autoincrement())
+  name String @unique
+  
+  characters CharacterTribe[]
+}
+
+model CharacterTribe {
+  characterId Int
+  tribeId     Int
+  
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  tribe       Tribe     @relation(fields: [tribeId], references: [id], onDelete: Cascade)
+  
+  @@id([characterId, tribeId])
+}
+model Spell {
+  id        Int  @id @default(autoincrement())
+  cardId    Int  @unique
+  spellType String
+
+  card      Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+}
+
+model Trap {
+  id        Int  @id @default(autoincrement())
+  cardId    Int  @unique
+  trapType  String
+
+  card      Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+}
+
+//中間テーブル　DeckCardは、DeckとCardの多対多の関係を表しています。deckIdとcardIdの組み合わせが一意であることを保証するために、@@id([deckId, cardId])が使用されています。また、onDelete: Cascadeオプションにより、親レコードが削除されたときに関連する子レコードも自動的に削除されるようになっています。
+model DeckCard {
+  deckId Int
+  cardId Int
+  count  Int @default(1)
+
+  deck Deck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+//onDelete:Cascadeとは、親レコードが削除されたときに子レコードも自動的に削除されることを意味します。これにより、データの整合性が保たれます。
+  @@id([deckId, cardId])
+}

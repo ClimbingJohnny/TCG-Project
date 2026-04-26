@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@import url(././BIGsign/style.css);
+@import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css");
+
+/* グローバルスタイルオーバーライド */
+@layer base {
+  :root {
+    @apply font-sans;
+  }
+
+  body {
+    @apply m-0 flex flex-col h-screen;
+  }
+
+  main {
+    @apply flex flex-1 flex-col items-center justify-center text-white bg-slate-800;
+  }
+
+  h1 {
+    @apply text-5xl leading-tight;
+  }
+
+  a {
+    @apply font-medium text-blue-500 no-underline;
+  }
+
+  a:hover {
+    @apply text-blue-400;
+  }
+
+  button {
+    @apply rounded border border-transparent px-5 py-2 text-base font-medium cursor-pointer transition-colors;
+    @apply bg-slate-900 hover:border-blue-500;
+  }
+}
+
+#root {
+  @apply flex flex-col flex-1;
+}

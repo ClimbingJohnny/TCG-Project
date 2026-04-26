@@ -1,0 +1,23 @@
+{
+  "name": "tcg-project",
+  "version": "1.0.0",
+  "description": "TCG Project - React Client + Node.js Server",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm start",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "cd client && npm run build",
+    "build:server": "echo \"Server build not configured\"",
+    "install:all": "npm install && cd client && npm install && cd ../server && npm install && cd ..",
+    "lint": "cd client && npm run lint"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.2",
+    "autoprefixer": "^10.5.0",
+    "concurrently": "^8.2.2",
+    "postcss": "^8.5.10",
+    "tailwindcss": "^4.2.2"
+  }
+}
