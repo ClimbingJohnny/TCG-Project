@@ -1,6 +1,34 @@
 import { useState, useEffect } from 'react';
 import Go_top from '../../Oth_compornents/go_top';
 
+// AST関連の型定義（簡易版）
+type TargetType = 'monster' | 'spell' | 'trap' | 'player' | 'card' | 'zone';
+type QualifierType = 'owner' | 'timing' | 'event' | 'stat' | 'position' | 'zone' | 'count';
+type EffectType = 'destroy' | 'draw' | 'search' | 'banish' | 'return_to_hand' | 'stat_change' | 'negate' | 'special_summon' | 'move';
+type ZoneType = 'deck' | 'hand' | 'field' | 'graveyard' | 'banished' | 'extra_deck';
+
+interface QualifierNode {
+  id: string;
+  qualifierType: QualifierType;
+  value?: string | number;
+  operator?: 'eq' | 'gte' | 'lte' | 'neq';
+}
+
+interface TargetNode {
+  id: string;
+  targetType: TargetType;
+  qualifiers: QualifierNode[];
+}
+
+interface EffectNode {
+  id: string;
+  effectType: EffectType;
+  target: TargetNode;
+  value?: number;
+  fromZone?: ZoneType;
+  toZone?: ZoneType;
+}
+
 export default function Newcardmake() {
   const [formData, setFormData] = useState({
     name: '',
@@ -12,6 +40,78 @@ export default function Newcardmake() {
     imageUrl: '',
     effect: ''
   });
+
+  const [effects, setEffects] = useState<EffectNode[]>([]);
+
+  const addEffect = () => {
+    const newEffect: EffectNode = {
+      id: `effect_${Date.now()}`,
+      effectType: 'move',
+      target: {
+        id: `target_${Date.now()}`,
+        targetType: 'card',
+        qualifiers: []
+      }
+    };
+    setEffects(prev => [...prev, newEffect]);
+  };
+
+  const updateEffect = (effectId: string, updates: Partial<EffectNode>) => {
+    setEffects(prev => prev.map(effect =>
+      effect.id === effectId ? { ...effect, ...updates } : effect
+    ));
+  };
+
+  const updateTarget = (effectId: string, targetUpdates: Partial<TargetNode>) => {
+    setEffects(prev => prev.map(effect =>
+      effect.id === effectId ? {
+        ...effect,
+        target: { ...effect.target, ...targetUpdates }
+      } : effect
+    ));
+  };
+
+  const addQualifier = (effectId: string) => {
+    const newQualifier: QualifierNode = {
+      id: `qualifier_${Date.now()}`,
+      qualifierType: 'zone'
+    };
+    setEffects(prev => prev.map(effect =>
+      effect.id === effectId ? {
+        ...effect,
+        target: {
+          ...effect.target,
+          qualifiers: [...effect.target.qualifiers, newQualifier]
+        }
+      } : effect
+    ));
+  };
+
+  const updateQualifier = (effectId: string, qualifierId: string, updates: Partial<QualifierNode>) => {
+    setEffects(prev => prev.map(effect =>
+      effect.id === effectId ? {
+        ...effect,
+        target: {
+          ...effect.target,
+          qualifiers: effect.target.qualifiers.map(q =>
+            q.id === qualifierId ? { ...q, ...updates } : q
+          )
+        }
+      } : effect
+    ));
+  };
+
+  const removeQualifier = (effectId: string, qualifierId: string) => {
+    setEffects(prev => prev.map(effect =>
+      effect.id === effectId ? {
+        ...effect,
+        target: {
+          ...effect.target,
+          qualifiers: effect.target.qualifiers.filter(q => q.id !== qualifierId)
+        }
+      } : effect
+    ));
+  };
 
   useEffect(() => {
   const handler = (e: BeforeUnloadEvent) => {
@@ -40,6 +140,7 @@ export default function Newcardmake() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Card Data:', formData);
+    console.log('Effects AST:', effects);
     // 送信処理はここに記載
   };
 
@@ -198,20 +299,146 @@ export default function Newcardmake() {
 
             {/* 効果タブ */}
             {activeTab === 'effect' && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold mb-2">カード効果</label>
-                  <textarea
-                    name="effect"
-                    value={formData.effect}
-                    onChange={handleInputChange}
-                    placeholder="カードの効果・スキルを詳しく記入してください"
-                    rows={8}
-                    className="w-full px-4 py-2 border-2 border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                  />
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">効果設定</h3>
+                  <button
+                    type="button"
+                    onClick={addEffect}
+                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 text-sm"
+                  >
+                    + 効果を追加
+                  </button>
                 </div>
+
+                {effects.map((effect, index) => (
+                  <div key={effect.id} className="border border-gray-300 rounded p-4 space-y-4">
+                    <h4 className="font-semibold">効果 {index + 1}</h4>
+                    
+                    {/* 対象選択 */}
+                    <div className="flex items-center space-x-4">
+                      <select
+                        value={effect.target.targetType}
+                        onChange={(e) => updateTarget(effect.id, { targetType: e.target.value as TargetType })}
+                        className="px-3 py-2 border border-gray-300 rounded"
+                      >
+                        <option value="card">カード</option>
+                        <option value="monster">モンスター</option>
+                        <option value="spell">魔法</option>
+                        <option value="trap">罠</option>
+                        <option value="player">プレイヤー</option>
+                        <option value="zone">ゾーン</option>
+                      </select>
+                      <span>が</span>
+                      
+                      {/* 資格追加ボタン */}
+                      <button
+                        type="button"
+                        onClick={() => addQualifier(effect.id)}
+                        className="text-blue-500 hover:text-blue-700 text-xl"
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    {/* 資格リスト */}
+                    {effect.target.qualifiers.map((qualifier) => (
+                      <div key={qualifier.id} className="flex items-center space-x-2 ml-4">
+                        <select
+                          value={qualifier.qualifierType}
+                          onChange={(e) => updateQualifier(effect.id, qualifier.id, { qualifierType: e.target.value as QualifierType })}
+                          className="px-3 py-1 border border-gray-300 rounded text-sm"
+                        >
+                          <option value="owner">所有者</option>
+                          <option value="timing">タイミング</option>
+                          <option value="event">イベント</option>
+                          <option value="stat">ステータス</option>
+                          <option value="position">位置</option>
+                          <option value="zone">ゾーン</option>
+                          <option value="count">数</option>
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="値"
+                          value={qualifier.value || ''}
+                          onChange={(e) => updateQualifier(effect.id, qualifier.id, { value: e.target.value })}
+                          className="px-2 py-1 border border-gray-300 rounded text-sm w-20"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeQualifier(effect.id, qualifier.id)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+
+                    {/* 効果タイプ選択 */}
+                    <div className="flex items-center space-x-4">
+                      <span>を</span>
+                      <select
+                        value={effect.effectType}
+                        onChange={(e) => updateEffect(effect.id, { effectType: e.target.value as EffectType })}
+                        className="px-3 py-2 border border-gray-300 rounded"
+                      >
+                        <option value="move">移動</option>
+                        <option value="destroy">破壊</option>
+                        <option value="draw">ドロー</option>
+                        <option value="search">サーチ</option>
+                        <option value="banish">除外</option>
+                        <option value="return_to_hand">手札に戻す</option>
+                        <option value="stat_change">ステータス変更</option>
+                        <option value="negate">無効</option>
+                        <option value="special_summon">特殊召喚</option>
+                      </select>
+                      <span>する。</span>
+                    </div>
+
+                    {/* 移動効果の場合のゾーン選択 */}
+                    {effect.effectType === 'move' && (
+                      <div className="flex items-center space-x-4 ml-4">
+                        <span>移動元:</span>
+                        <select
+                          value={effect.fromZone || ''}
+                          onChange={(e) => updateEffect(effect.id, { fromZone: e.target.value as ZoneType })}
+                          className="px-3 py-2 border border-gray-300 rounded"
+                        >
+                          <option value="">選択</option>
+                          <option value="deck">デッキ</option>
+                          <option value="hand">手札</option>
+                          <option value="field">フィールド</option>
+                          <option value="graveyard">墓地</option>
+                          <option value="banished">除外</option>
+                          <option value="extra_deck">EXデッキ</option>
+                        </select>
+                        <span>→ 移動先:</span>
+                        <select
+                          value={effect.toZone || ''}
+                          onChange={(e) => updateEffect(effect.id, { toZone: e.target.value as ZoneType })}
+                          className="px-3 py-2 border border-gray-300 rounded"
+                        >
+                          <option value="">選択</option>
+                          <option value="deck">デッキ</option>
+                          <option value="hand">手札</option>
+                          <option value="field">フィールド</option>
+                          <option value="graveyard">墓地</option>
+                          <option value="banished">除外</option>
+                          <option value="extra_deck">EXデッキ</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {effects.length === 0 && (
+                  <div className="text-center text-gray-500 py-8">
+                    効果が設定されていません。「+ 効果を追加」から追加してください。
+                  </div>
+                )}
+
                 <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
-                  <p className="text-sm text-gray-700">💡 後から効果の設定方法を決めていきます</p>
+                  <p className="text-sm text-gray-700">💡 AST形式で効果を構築しています。生成されたデータはJSONとして保存されます。</p>
                 </div>
               </div>
             )}
