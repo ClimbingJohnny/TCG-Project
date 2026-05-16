@@ -10,6 +10,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -17,9 +18,12 @@ model User {
   name  String @unique
   password String
   deck Deck[]
-  admin Boolean @default(false)
+  historiesAsUser History[] @relation("UserHistory")
+  historiesAsOpponent History[] @relation("OpponentHistory")
+  isadmin Boolean @default(false)
   joinedAt DateTime @default(now())
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt 
 }
 
 model Deck {
@@ -40,6 +44,8 @@ model Card {
   kind    Int
   flavorText String?
   effect Json?
+  raceid Int
+  race Race @relation(fields: [raceid], references: [id]) 
 
   regulation Int @default(0) 
   pack String
@@ -53,6 +59,13 @@ model Card {
 
   @@index([name])
   @@index([kind])
+}
+// 種族テーブル
+model Race {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  cards Card[]
 }
 //上記のコードは、カードゲームのデータモデルを定義しています。Cardモデルは、カードの基本情報を持ち、Character、Spell、Trapモデルは、それぞれのカードの特定の属性を持っています。DeckCardモデルは、デッキとカードの関係を表しています。
 model Character {
@@ -107,4 +120,39 @@ model DeckCard {
   card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
 //onDelete:Cascadeとは、親レコードが削除されたときに子レコードも自動的に削除されることを意味します。これにより、データの整合性が保たれます。
   @@id([deckId, cardId])
+}
+//対戦ログテーブル
+model History{
+  id Int @id @default(autoincrement())
+  userId Int
+  opponentId Int
+  result String // "win" | "lose" | "draw" など
+  matchData Json? // 試合の詳細なデータ（ターン情報、カードの配置、イベントなど）
+  playedAt DateTime @default(now())
+
+  user User @relation("UserHistory", fields: [userId], references: [id], onDelete: Cascade)
+  opponent User @relation("OpponentHistory", fields: [opponentId], references: [id], onDelete: Cascade)
+  historyDecks HistoryDeck[]
+
+  @@index([userId])
+  @@index([opponentId])
+  @@index([playedAt])
+}
+
+//対戦時のデッキ保存テーブル
+model HistoryDeck{
+  id Int @id @default(autoincrement())
+  historyId Int
+  userId Int // デッキを使用したユーザー
+  opponentId Int // 対戦相手のユーザー
+  deckName String? // デッキの名前
+  deckData Json? // デッキに含まれるカード情報
+  createdAt DateTime @default(now())
+
+  history History @relation(fields: [historyId], references: [id], onDelete: Cascade)
+
+  @@index([historyId])
+  @@index([userId])
+  @@index([opponentId])
+  @@unique([historyId, userId])
 }
