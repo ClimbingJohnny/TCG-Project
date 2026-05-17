@@ -6,7 +6,7 @@
 
 //リレーションの方法　fieldsはこちら側が現在参照しようとしている外部キーの値で、referencesはその値がどこにあるかを示す外部の主キー
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
   output   = "../generated/prisma"
 }
 

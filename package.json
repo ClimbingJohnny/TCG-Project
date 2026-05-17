@@ -14,10 +14,6 @@
     "lint": "cd client && npm run lint"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.2.2",
-    "autoprefixer": "^10.5.0",
-    "concurrently": "^8.2.2",
-    "postcss": "^8.5.10",
-    "tailwindcss": "^4.2.2"
+    "concurrently": "^8.2.2"
   }
 }
