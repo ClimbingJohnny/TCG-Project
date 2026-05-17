@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import CreatableSelect from 'react-select/creatable';
 import Go_top from '../../Oth_compornents/go_top';
 
 // === AST関連の型定義（簡易版） ===
@@ -42,7 +43,7 @@ export default function Newcardmake() {
   // 例: <input name="power" /> は formData.power に保存されます。
   const [formData, setFormData] = useState({
     name: '',
-    cardType:'',
+    cardType:'character',
     level: '',
     race: '',
     power: '',
@@ -157,8 +158,8 @@ export default function Newcardmake() {
   const [activeTab, setActiveTab] = useState<'basic' | 'effect'>('basic');
 
   // 入力変更を一元管理するハンドラ
-  // input/textarea の name 属性をキーとして formData を更新するシンプルな実装
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  // input/textarea/select の name 属性をキーとして formData を更新するシンプルな実装
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -201,6 +202,7 @@ export default function Newcardmake() {
               <div>
                 <h2 className="text-xl font-bold mb-1">{formData.name || '???'}</h2>
                 <div className="text-xs space-y-1">
+                  <p>タイプ: {formData.cardType || '-'}</p>
                   <p>レベル: {formData.level || '-'}</p>
                   <p>種族: {formData.race || '-'}</p>
                   <p>パワー: {formData.power || '-'}</p>
@@ -268,8 +270,22 @@ export default function Newcardmake() {
                     className="w-full px-4 py-2 border-2 border-gray-300 rounded focus:outline-none focus:border-blue-500"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                {/* レベル */}
+                <div className="grid grid-cols-3 gap-4">
+                  {/* カード種類 */}
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">カード種類</label>
+                    <select
+                      name="cardType"
+                      value={formData.cardType}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border-2 border-gray-300 rounded focus:outline-none focus:border-blue-500">
+                        <option value="character">キャラクター</option>
+                        <option value="spell">スペル</option>
+                        <option value="trap">トラップ</option>
+                    </select>
+                  </div>
+
+                  {/* レベル */}
                   <div>
                     <label className="block text-sm font-semibold mb-2">レベル</label>
                     <input
@@ -280,26 +296,18 @@ export default function Newcardmake() {
                       placeholder="1-12"
                       min="1"
                       max="12"
-                      className="w-full px-4 py-2 border-2 border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold mb-2">カード種類</label>
-                    <input
-                      type="number"
-                      name="cardType"
-                      value={formData.cardType}
-                      onChange={handleInputChange}
-                      placeholder="1-12"
-                      min="1"
-                      max="12"
-                      className="w-full px-4 py-2 border-2 border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                      disabled={formData.cardType !== 'monster'}
+                      className={`w-full px-4 py-2 border-2 rounded focus:outline-none focus:border-blue-500 ${
+                        formData.cardType !== 'monster'
+                          ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'border-gray-300'
+                      }`}
                     />
                   </div>
 
-                  {/* パワー */}
+                  {/* 攻撃力 */}
                   <div>
-                    <label className="block text-sm font-semibold mb-2">パワー</label>
+                    <label className="block text-sm font-semibold mb-2">攻撃力</label>
                     <input
                       type="number"
                       name="power"
@@ -307,7 +315,12 @@ export default function Newcardmake() {
                       onChange={handleInputChange}
                       placeholder="0-9999"
                       min="0"
-                      className="w-full px-4 py-2 border-2 border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                      disabled={formData.cardType !== 'monster'}
+                      className={`w-full px-4 py-2 border-2 rounded focus:outline-none focus:border-blue-500 ${
+                        formData.cardType !== 'monster'
+                          ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'border-gray-300'
+                      }`}
                     />
                   </div>
                 </div>
