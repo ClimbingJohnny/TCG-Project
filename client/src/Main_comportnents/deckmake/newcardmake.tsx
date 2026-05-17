@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import Go_top from '../../Oth_compornents/go_top';
 
-// AST関連の型定義（簡易版）
-type TargetType = 'monster' | 'spell' | 'trap' | 'player' | 'card' | 'zone';
+// === AST関連の型定義（簡易版） ===
+// このファイルではカード効果を「簡易AST（抽象構文木）風」に表現します。
+// - フロントエンド上で効果を組み立て、JSON として保存/送信できるようにするための構造です。
+// - 型はレビューや開発を分かりやすくするためにここで定義しています。実際のサーバ型に合わせて拡張してください。
+type TargetType = 'character' | 'spell' | 'trap' | 'player' | 'card' | 'zone';
 type QualifierType = 'owner' | 'timing' | 'event' | 'stat' | 'position' | 'zone' | 'count';
 type EffectType = 'destroy' | 'draw' | 'search' | 'banish' | 'return_to_hand' | 'stat_change' | 'negate' | 'special_summon' | 'move';
 type ZoneType = 'deck' | 'hand' | 'field' | 'graveyard' | 'banished' | 'extra_deck';
@@ -29,20 +32,31 @@ interface EffectNode {
   toZone?: ZoneType;
 }
 
+// Newcardmake コンポーネント
+// - カードの基本情報入力フォームと、効果（AST）を組み立てるUIを提供します。
+// - formData: カードの基本フィールド（名前/レベル/攻撃力等）
+// - effects: 効果を表す配列（EffectNode の配列）
 export default function Newcardmake() {
+  // --- フォームの状態 ---
+  // 各 input の name 属性とキーを一致させることで、handleInputChange で一元的に更新しています。
+  // 例: <input name="power" /> は formData.power に保存されます。
   const [formData, setFormData] = useState({
     name: '',
+    cardType:'',
     level: '',
     race: '',
-    attack: '',
-    defense: '',
-    description: '',
+    power: '',
+    flavortext:'',
+    effect: '',
     imageUrl: '',
-    effect: ''
   });
 
+  // --- 効果（AST） ---
+  // EffectNode の配列として管理します。各要素は UI で編集可能な効果を表します。
   const [effects, setEffects] = useState<EffectNode[]>([]);
 
+  // 新しい効果ノードを追加する（デフォルトは移動効果）
+  // UI 上で追加ボタンを押したときに呼ばれます。
   const addEffect = () => {
     const newEffect: EffectNode = {
       id: `effect_${Date.now()}`,
@@ -56,12 +70,21 @@ export default function Newcardmake() {
     setEffects(prev => [...prev, newEffect]);
   };
 
+  // 指定した効果（effectId）を配列から取り除く
+  // UI 上の「効果を削除」ボタンで呼び出します。
+  const removeEffect = (effectId: string) => {
+    setEffects(prev => prev.filter(e => e.id !== effectId));
+  };
+
+  // 効果ノードそのもののプロパティを更新するユーティリティ
+  // 例: effectType, value, fromZone, toZone など
   const updateEffect = (effectId: string, updates: Partial<EffectNode>) => {
     setEffects(prev => prev.map(effect =>
       effect.id === effectId ? { ...effect, ...updates } : effect
     ));
   };
 
+  // 効果の対象 (target) 部分のみを差分更新するためのユーティリティ
   const updateTarget = (effectId: string, targetUpdates: Partial<TargetNode>) => {
     setEffects(prev => prev.map(effect =>
       effect.id === effectId ? {
@@ -71,6 +94,7 @@ export default function Newcardmake() {
     ));
   };
 
+  // 対象に対する条件（Qualifier）を追加します。例: 所有者が〇〇、位置がフィールド、など
   const addQualifier = (effectId: string) => {
     const newQualifier: QualifierNode = {
       id: `qualifier_${Date.now()}`,
@@ -87,6 +111,7 @@ export default function Newcardmake() {
     ));
   };
 
+  // 既存の qualifier の内容を更新します（value や operator の変更など）
   const updateQualifier = (effectId: string, qualifierId: string, updates: Partial<QualifierNode>) => {
     setEffects(prev => prev.map(effect =>
       effect.id === effectId ? {
@@ -101,6 +126,7 @@ export default function Newcardmake() {
     ));
   };
 
+  // 指定した qualifier を削除します
   const removeQualifier = (effectId: string, qualifierId: string) => {
     setEffects(prev => prev.map(effect =>
       effect.id === effectId ? {
@@ -113,6 +139,7 @@ export default function Newcardmake() {
     ));
   };
 
+  // 入力中にブラウザを閉じたりリロードすると入力が失われるため、未保存の変更がある場合に確認ダイアログを出す
   useEffect(() => {
   const handler = (e: BeforeUnloadEvent) => {
     // 入力が何かあれば警告
@@ -129,6 +156,8 @@ export default function Newcardmake() {
 }, [formData]);
   const [activeTab, setActiveTab] = useState<'basic' | 'effect'>('basic');
 
+  // 入力変更を一元管理するハンドラ
+  // input/textarea の name 属性をキーとして formData を更新するシンプルな実装
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -137,6 +166,8 @@ export default function Newcardmake() {
     }));
   };
 
+  // フォーム送信時の処理（現在はデバッグ出力のみ）
+  // 実運用ではここでバリデーション→API送信などを行います。
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Card Data:', formData);
@@ -172,11 +203,11 @@ export default function Newcardmake() {
                 <div className="text-xs space-y-1">
                   <p>⭐ Lv: {formData.level || '-'}</p>
                   <p>🐉 種族: {formData.race || '-'}</p>
-                  <p>⚔️ 攻撃: {formData.attack || '-'}</p>
+                  <p>⚔️ 攻撃: {formData.power || '-'}</p>
                 </div>
               </div>
               <div className="bg-gray-50 border border-gray-300 rounded p-2 text-xs text-gray-700">
-                <p className="line-clamp-3">{formData.description || '説明文がここに表示されます'}</p>
+                <p className="line-clamp-3">{formData.flavortext || '説明文がここに表示されます'}</p>
               </div>
             </div>
           </div>
@@ -259,8 +290,8 @@ export default function Newcardmake() {
                     <label className="block text-sm font-semibold mb-2">攻撃力</label>
                     <input
                       type="number"
-                      name="attack"
-                      value={formData.attack}
+                      name="power"
+                      value={formData.power}
                       onChange={handleInputChange}
                       placeholder="0-9999"
                       min="0"
@@ -286,8 +317,8 @@ export default function Newcardmake() {
                 <div>
                   <label className="block text-sm font-semibold mb-2">説明文</label>
                   <textarea
-                    name="description"
-                    value={formData.description}
+                    name="flavortext"
+                    value={formData.flavortext}
                     onChange={handleInputChange}
                     placeholder="カードの説明を入力"
                     rows={4}
@@ -368,6 +399,7 @@ export default function Newcardmake() {
                           type="button"
                           onClick={() => removeQualifier(effect.id, qualifier.id)}
                           className="text-red-500 hover:text-red-700"
+                          aria-label="資格を削除"
                         >
                           ×
                         </button>
@@ -381,6 +413,7 @@ export default function Newcardmake() {
                         value={effect.effectType}
                         onChange={(e) => updateEffect(effect.id, { effectType: e.target.value as EffectType })}
                         className="px-3 py-2 border border-gray-300 rounded"
+                        aria-label={`効果タイプ-${index + 1}`}
                       >
                         <option value="move">移動</option>
                         <option value="destroy">破壊</option>
@@ -397,7 +430,7 @@ export default function Newcardmake() {
 
                     {/* 移動効果の場合のゾーン選択 */}
                     {effect.effectType === 'move' && (
-                      <div className="flex items-center space-x-4 ml-4">
+                      <div className="flex items-center space-x-4 ml-4">                      
                         <span>移動元:</span>
                         <select
                           value={effect.fromZone || ''}
@@ -428,6 +461,16 @@ export default function Newcardmake() {
                         </select>
                       </div>
                     )}
+
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => removeEffect(effect.id)}
+                          className="text-sm text-red-600 hover:text-red-800"
+                        >
+                          効果を削除
+                        </button>
+                      </div>
                   </div>
                 ))}
 
@@ -440,17 +483,22 @@ export default function Newcardmake() {
                 <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
                   <p className="text-sm text-gray-700">💡 AST形式で効果を構築しています。生成されたデータはJSONとして保存されます。</p>
                 </div>
+                {/* デバッグ用: フォームと効果の JSON プレビュー */}
+                <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded text-xs">
+                  <div className="font-semibold mb-2">現在のデータ（プレビュー）</div>
+                  <pre className="whitespace-pre-wrap max-h-60 overflow-auto text-xs">{JSON.stringify({ formData, effects }, null, 2)}</pre>
+                </div>
               </div>
             )}
 
             {/* 送信ボタン */}
             <div className="flex gap-4 pt-4">
-              <button
-                type="submit"
-                className="flex-1 bg-blue-500 text-white px-6 py-3 rounded font-semibold transition-all hover:bg-blue-600 active:translate-y-0.5"
-              >
-                カードを保存
-              </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-blue-500 text-white px-6 py-3 rounded font-semibold transition-all hover:bg-blue-600 active:translate-y-0.5"
+                >
+                  カードを保存
+                </button>
               <button
                 type="reset"
                 className="px-6 py-3 border-2 border-gray-400 rounded font-semibold transition-all hover:bg-gray-100"

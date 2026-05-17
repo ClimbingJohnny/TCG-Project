@@ -3,8 +3,8 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 
 // ルートのインポート
-import authRoutes from './routes/auth.ts';
-import deckmakeRoutes from './routes/deckmake.ts';
+import authRoutes from './routes/auth';
+import deckmakeRoutes from './routes/deckmake';
 
 const app = express();
 
@@ -33,6 +33,6 @@ app.use('/', authRoutes);
 app.use('/deckmake', deckmakeRoutes);
 
 // サーバーの起動
-app.listen(3000, () => {
+app.listen(3000,"0.0.0.0", () => {
   console.log('Server is running on port 3000');
 });

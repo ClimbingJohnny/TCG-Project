@@ -3,14 +3,15 @@
 
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
+
+//リレーションの方法　fieldsはこちら側が現在参照しようとしている外部キーの値で、referencesはその値がどこにあるかを示す外部の主キー
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -18,9 +19,11 @@ model User {
   name  String @unique
   password String
   deck Deck[]
-  historiesAsUser History[] @relation("UserHistory")
-  historiesAsOpponent History[] @relation("OpponentHistory")
+  historyAsUser1 History[] @relation("User1")
+  historyAsUser2 History[] @relation("User2")
+
   isadmin Boolean @default(false)
+
   joinedAt DateTime @default(now())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt 
@@ -36,29 +39,36 @@ model Deck {
 
   @@index([userId])
   @@index([userId, name])
+
+}
+
+enum Cardtype{
+  Character
+  Spell
+  Trap
 }
 
 model Card {
   id        Int @id @default(autoincrement())
   name      String
-  kind    Int
+  cardtype Cardtype //カードの種類（キャラクター・スペル・トラップ）
+  raceid Int // 種族ID
+  race Race @relation(fields: [raceid], references: [id])
+
+  Power Int?
+  level Int?
+  effect Json? 
+
   flavorText String?
-  effect Json?
-  raceid Int
-  race Race @relation(fields: [raceid], references: [id]) 
 
   regulation Int @default(0) 
   pack String
   createdAt DateTime @default(now())
 
-  character Character?
-  spell     Spell?
-  trap      Trap?
-
   deckCards DeckCard[]
 
   @@index([name])
-  @@index([kind])
+  @@index([cardtype])
 }
 // 種族テーブル
 model Race {
@@ -67,92 +77,37 @@ model Race {
 
   cards Card[]
 }
-//上記のコードは、カードゲームのデータモデルを定義しています。Cardモデルは、カードの基本情報を持ち、Character、Spell、Trapモデルは、それぞれのカードの特定の属性を持っています。DeckCardモデルは、デッキとカードの関係を表しています。
-model Character {
-  id      Int  @id @default(autoincrement())
-  cardId  Int  @unique
-  level   Int
-  power   Int
-
-  card    Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
-  tribes  CharacterTribe[]
-}
-// 種族テーブル
-model Tribe {
-  id Int @id @default(autoincrement())
-  name String @unique
-  
-  characters CharacterTribe[]
-}
-
-model CharacterTribe {
-  characterId Int
-  tribeId     Int
-  
-  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
-  tribe       Tribe     @relation(fields: [tribeId], references: [id], onDelete: Cascade)
-  
-  @@id([characterId, tribeId])
-}
-model Spell {
-  id        Int  @id @default(autoincrement())
-  cardId    Int  @unique
-  spellType String
-
-  card      Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
-}
-
-model Trap {
-  id        Int  @id @default(autoincrement())
-  cardId    Int  @unique
-  trapType  String
-
-  card      Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
-}
-
 //中間テーブル　DeckCardは、DeckとCardの多対多の関係を表しています。deckIdとcardIdの組み合わせが一意であることを保証するために、@@id([deckId, cardId])が使用されています。また、onDelete: Cascadeオプションにより、親レコードが削除されたときに関連する子レコードも自動的に削除されるようになっています。
 model DeckCard {
   deckId Int
   cardId Int
   count  Int @default(1)
+  historyFlug Boolean @default(false)
 
   deck Deck @relation(fields: [deckId], references: [id], onDelete: Cascade)
   card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
 //onDelete:Cascadeとは、親レコードが削除されたときに子レコードも自動的に削除されることを意味します。これにより、データの整合性が保たれます。
-  @@id([deckId, cardId])
+  @@id([deckId, cardId])//複合キー
 }
-//対戦ログテーブル
-model History{
+//対戦履歴を保存するテーブル
+model History {
   id Int @id @default(autoincrement())
-  userId Int
-  opponentId Int
-  result String // "win" | "lose" | "draw" など
-  matchData Json? // 試合の詳細なデータ（ターン情報、カードの配置、イベントなど）
-  playedAt DateTime @default(now())
+  user_1_Id Int
+  user_2_Id Int
+  Deck_1_ID Int @unique
+  Deck_2_ID Int @unique
 
-  user User @relation("UserHistory", fields: [userId], references: [id], onDelete: Cascade)
-  opponent User @relation("OpponentHistory", fields: [opponentId], references: [id], onDelete: Cascade)
-  historyDecks HistoryDeck[]
+  Deck_1 HistoryDeck @relation("Deck1", fields: [Deck_1_ID], references: [id])
+  Deck_2 HistoryDeck @relation("Deck2", fields: [Deck_2_ID], references: [id])
+  User_1 User @relation("User1", fields: [user_1_Id], references: [id])
+  User_2 User @relation("User2", fields: [user_2_Id], references: [id])
 
-  @@index([userId])
-  @@index([opponentId])
-  @@index([playedAt])
+  log Json
+  created_at DateTime @default(now())
 }
 
-//対戦時のデッキ保存テーブル
 model HistoryDeck{
   id Int @id @default(autoincrement())
-  historyId Int
-  userId Int // デッキを使用したユーザー
-  opponentId Int // 対戦相手のユーザー
-  deckName String? // デッキの名前
-  deckData Json? // デッキに含まれるカード情報
-  createdAt DateTime @default(now())
-
-  history History @relation(fields: [historyId], references: [id], onDelete: Cascade)
-
-  @@index([historyId])
-  @@index([userId])
-  @@index([opponentId])
-  @@unique([historyId, userId])
+  history1 History? @relation("Deck1")
+  history2 History? @relation("Deck2")
 }
