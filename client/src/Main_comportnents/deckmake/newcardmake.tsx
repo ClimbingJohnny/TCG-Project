@@ -201,9 +201,9 @@ export default function Newcardmake() {
               <div>
                 <h2 className="text-xl font-bold mb-1">{formData.name || '???'}</h2>
                 <div className="text-xs space-y-1">
-                  <p>⭐ Lv: {formData.level || '-'}</p>
-                  <p>🐉 種族: {formData.race || '-'}</p>
-                  <p>⚔️ 攻撃: {formData.power || '-'}</p>
+                  <p>レベル: {formData.level || '-'}</p>
+                  <p>種族: {formData.race || '-'}</p>
+                  <p>パワー: {formData.power || '-'}</p>
                 </div>
               </div>
               <div className="bg-gray-50 border border-gray-300 rounded p-2 text-xs text-gray-700">
@@ -268,9 +268,8 @@ export default function Newcardmake() {
                     className="w-full px-4 py-2 border-2 border-gray-300 rounded focus:outline-none focus:border-blue-500"
                   />
                 </div>
-
-                {/* レベル */}
                 <div className="grid grid-cols-2 gap-4">
+                {/* レベル */}
                   <div>
                     <label className="block text-sm font-semibold mb-2">レベル</label>
                     <input
@@ -284,10 +283,23 @@ export default function Newcardmake() {
                       className="w-full px-4 py-2 border-2 border-gray-300 rounded focus:outline-none focus:border-blue-500"
                     />
                   </div>
-
-                  {/* 攻撃力 */}
                   <div>
-                    <label className="block text-sm font-semibold mb-2">攻撃力</label>
+                    <label className="block text-sm font-semibold mb-2">カード種類</label>
+                    <input
+                      type="number"
+                      name="cardType"
+                      value={formData.cardType}
+                      onChange={handleInputChange}
+                      placeholder="1-12"
+                      min="1"
+                      max="12"
+                      className="w-full px-4 py-2 border-2 border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  {/* パワー */}
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">パワー</label>
                     <input
                       type="number"
                       name="power"
