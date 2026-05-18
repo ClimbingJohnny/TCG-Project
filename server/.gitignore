@@ -3,3 +3,5 @@ node_modules
 .env
 
 /generated/prisma
+#migrate系を除外
+prisma/migrations/
