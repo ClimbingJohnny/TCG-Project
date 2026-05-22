@@ -1,6 +1,6 @@
 import express, { Router } from 'express';
-import * as deckController from '../controllers/deckmake/deckController.ts';
-import * as cardController from '../controllers/deckmake/cardController.ts';
+import * as deckController from '../controllers/deckmake/deckController';
+import * as cardController from '../controllers/deckmake/cardController';
 
 const router = Router();
 
@@ -34,10 +34,13 @@ router.delete('/deck/card/:deckCardId', cardController.removeCardFromDeck);
 // カードの数量を更新
 router.put('/deck/card/:deckCardId', cardController.updateCardQuantity);
 
-// 新しいカードを作成
-router.post('/card', cardController.createCard);
+// 新しいカードを作成処理の実行
+router.post('/card/create', cardController.createCard);
 
 // すべてのカードを取得
 router.get('/cards', cardController.getAllCards);
+
+// すべての種族を取得
+router.get('/races', cardController.getAllRaces);
 
 export default router;
