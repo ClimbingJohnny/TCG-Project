@@ -15,7 +15,7 @@ datasource db {
 }
 
 model User {
-  id    Int @id @default(autoincrement())
+  id    BigInt @id @default(autoincrement())
   name  String @unique
   password String
   deck Deck[]
@@ -24,18 +24,18 @@ model User {
 
   isadmin Boolean @default(false)
 
-  joinedAt DateTime @default(now())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt 
+  joined_At DateTime @default(now())
+  created_At DateTime @default(now())
+  updated_At DateTime @updatedAt 
 }
 
 model Deck {
-  id Int @id @default(autoincrement())
+  id BigInt @id @default(autoincrement())
   name String
   description String?
-  userId Int 
+  userId BigInt 
   user    User       @relation(fields: [userId], references: [id])
-  cards   DeckCard[]
+  cards   Deck_Card[]
 
   @@index([userId])
   @@index([userId, name])
@@ -49,65 +49,72 @@ enum Cardtype{
 }
 
 model Card {
-  id        Int @id @default(autoincrement())
+  id        BigInt @id @default(autoincrement())
   name      String
   cardtype Cardtype //カードの種類（キャラクター・スペル・トラップ）
-  raceid Int // 種族ID
-  race Race @relation(fields: [raceid], references: [id])
+  race_id BigInt // 種族ID
+  race Race @relation(fields: [race_id], references: [id])
 
-  Power Int?
+  power BigInt?
   level Int?
   effect Json? 
 
   flavorText String?
 
   regulation Int @default(0) 
-  pack String
-  createdAt DateTime @default(now())
+  pack_id BigInt
+  pack Pack @relation(fields:[pack_id], references:[id])
+  created_At DateTime @default(now())
 
-  deckCards DeckCard[]
+  deck_Card Deck_Card[]
 
   @@index([name])
   @@index([cardtype])
 }
 // 種族テーブル
 model Race {
-  id   Int    @id @default(autoincrement())
+  id   BigInt    @id @default(autoincrement())
   name String @unique
 
   cards Card[]
 }
-//中間テーブル　DeckCardは、DeckとCardの多対多の関係を表しています。deckIdとcardIdの組み合わせが一意であることを保証するために、@@id([deckId, cardId])が使用されています。また、onDelete: Cascadeオプションにより、親レコードが削除されたときに関連する子レコードも自動的に削除されるようになっています。
-model DeckCard {
-  deckId Int
-  cardId Int
+//パックの観念の追加
+model Pack {
+  id BigInt @id @default(autoincrement())
+  name String @unique
+  cards Card[]
+}
+//中間テーブル　Deck_Cardは、DeckとCardの多対多の関係を表しています。deck_Idとcard_Idの組み合わせが一意であることを保証するために、@@id([deck_Id, card_Id])が使用されています。また、onDelete: Cascadeオプションにより、親レコードが削除されたときに関連する子レコードも自動的に削除されるようになっています。
+model Deck_Card {
+  deck_Id BigInt
+  card_Id BigInt
   count  Int @default(1)
   historyFlug Boolean @default(false)
 
-  deck Deck @relation(fields: [deckId], references: [id], onDelete: Cascade)
-  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  deck Deck @relation(fields: [deck_Id], references: [id], onDelete: Cascade)
+  card Card @relation(fields: [card_Id], references: [id], onDelete: Cascade)
 //onDelete:Cascadeとは、親レコードが削除されたときに子レコードも自動的に削除されることを意味します。これにより、データの整合性が保たれます。
-  @@id([deckId, cardId])//複合キー
+  @@id([deck_Id, card_Id])//複合キー
 }
 //対戦履歴を保存するテーブル
 model History {
-  id Int @id @default(autoincrement())
-  user_1_Id Int
-  user_2_Id Int
-  Deck_1_ID Int @unique
-  Deck_2_ID Int @unique
+  id BigInt @id @default(autoincrement())
+  user_1_Id BigInt
+  user_2_Id BigInt
+  deck_1_ID BigInt @unique
+  deck_2_ID BigInt @unique
 
-  Deck_1 HistoryDeck @relation("Deck1", fields: [Deck_1_ID], references: [id])
-  Deck_2 HistoryDeck @relation("Deck2", fields: [Deck_2_ID], references: [id])
-  User_1 User @relation("User1", fields: [user_1_Id], references: [id])
-  User_2 User @relation("User2", fields: [user_2_Id], references: [id])
+  deck_1 HistoryDeck @relation("Deck1", fields: [deck_1_ID], references: [id])
+  deck_2 HistoryDeck @relation("Deck2", fields: [deck_2_ID], references: [id])
+  user_1 User @relation("User1", fields: [user_1_Id], references: [id])
+  user_2 User @relation("User2", fields: [user_2_Id], references: [id])
 
   log Json
-  created_at DateTime @default(now())
+  created_At DateTime @default(now())
 }
 
 model HistoryDeck{
-  id Int @id @default(autoincrement())
+  id BigInt @id @default(autoincrement())
   history1 History? @relation("Deck1")
   history2 History? @relation("Deck2")
 }

@@ -56,21 +56,59 @@ export const updateCardQuantity = async (deckCardId: string, quantity: number) =
  */
 export const createCard = async (
   name: string,
-  type: string,
-  cost: number,
-  description: string
+  cardtype: 'Character' | 'Spell' | 'Trap',
+  raceId: number,
+  level?: number,
+  power?: number,
+  flavorText?: string,
+  effect?: Record<string, unknown> | null
 ) => {
   try {
-    const card = await prisma.card.create({
-      data: {
-        name,
-        type,
-        cost,
-        description
-      }
-    });
+    console.log("\n========== cardService.createCard 実行 ==========");
+    console.log("📊 パラメータ:");
+    console.log("  - name:", name);
+    console.log("  - cardtype:", cardtype);
+    console.log("  - raceId:", raceId);
+    console.log("  - level:", level);
+    console.log("  - power:", power);
+    console.log("  - flavorText:", flavorText);
+    console.log("  - effect:", effect);
+
+    // effect がある場合はデータに含める
+    const data: any = {
+      name,
+      cardtype,
+      raceid: raceId,
+      pack: '',
+      regulation: 0,
+    };
+
+    if (level !== undefined) {
+      data.level = parseInt(level.toString(), 10);
+      console.log("✅ level を追加:", data.level);
+    }
+    if (power !== undefined) {
+      data.Power = parseInt(power.toString(), 10);
+      console.log("✅ Power を追加:", data.Power);
+    }
+    if (flavorText !== undefined) {
+      data.flavorText = flavorText;
+      console.log("✅ flavorText を追加:", flavorText);
+    }
+    if (effect) {
+      data.effect = effect;
+      console.log("✅ effect を追加:", effect);
+    }
+
+    console.log("📝 Prisma create() データ:", data);
+    console.log("🔌 DB に接続中...");
+
+    const card = await prisma.card.create({ data });
+    
+    console.log("✨ カード作成完了:", card);
     return { success: true, card };
   } catch (err) {
+    console.error("❌ cardService エラー:", err);
     return { success: false, error: err };
   }
 };
@@ -82,6 +120,19 @@ export const getAllCards = async () => {
   try {
     const cards = await prisma.card.findMany();
     return { success: true, cards };
+  } catch (err) {
+    return { success: false, error: err };
+  }
+};
+
+/**
+ * すべての種族を取得
+ */
+export const getAllRaces = async () => {
+  // console.log("これは起動しているでしょうか。");
+  try {
+    const races = await prisma.race.findMany();
+    return { success: true, races };
   } catch (err) {
     return { success: false, error: err };
   }

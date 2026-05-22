@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import CreatableSelect from 'react-select/creatable';
+import { useForm, Controller, type SubmitHandler } from "react-hook-form";
 import Go_top from '../../Oth_compornents/go_top';
+import axios from 'axios';
 
 // === AST関連の型定義（簡易版） ===
 // このファイルではカード効果を「簡易AST（抽象構文木）風」に表現します。
@@ -10,6 +12,11 @@ type TargetType = 'character' | 'spell' | 'trap' | 'player' | 'card' | 'zone';
 type QualifierType = 'owner' | 'timing' | 'event' | 'stat' | 'position' | 'zone' | 'count';
 type EffectType = 'destroy' | 'draw' | 'search' | 'banish' | 'return_to_hand' | 'stat_change' | 'negate' | 'special_summon' | 'move';
 type ZoneType = 'deck' | 'hand' | 'field' | 'graveyard' | 'banished' | 'extra_deck';
+// 種族型
+type RaceOption = {
+  value: string;
+  label: string;
+};
 
 interface QualifierNode {
   id: string;
@@ -33,24 +40,44 @@ interface EffectNode {
   toZone?: ZoneType;
 }
 
+interface FormData {
+  name: string;
+  cardType: string;
+  level: string;
+  race: RaceOption | null;
+  power: string;
+  flavortext: string;
+  effect: string;
+  imageUrl: string;
+}
+
 // Newcardmake コンポーネント
 // - カードの基本情報入力フォームと、効果（AST）を組み立てるUIを提供します。
 // - formData: カードの基本フィールド（名前/レベル/攻撃力等）
 // - effects: 効果を表す配列（EffectNode の配列）
 export default function Newcardmake() {
-  // --- フォームの状態 ---
-  // 各 input の name 属性とキーを一致させることで、handleInputChange で一元的に更新しています。
-  // 例: <input name="power" /> は formData.power に保存されます。
-  const [formData, setFormData] = useState({
-    name: '',
-    cardType:'character',
-    level: '',
-    race: '',
-    power: '',
-    flavortext:'',
-    effect: '',
-    imageUrl: '',
+  // --- react-hook-form のセットアップ ---
+  const {
+    register,
+    watch,
+    control,
+    handleSubmit,
+    reset,
+  } = useForm<FormData>({
+    defaultValues: {
+      name: '',
+      cardType: 'character',
+      level: '',
+      race: null,
+      power: '',
+      flavortext: '',
+      effect: '',
+      imageUrl: '',
+    },
   });
+
+  // フォーム値を監視（プレビュー用）
+  const formData = watch();
 
   // --- 効果（AST） ---
   // EffectNode の配列として管理します。各要素は UI で編集可能な効果を表します。
@@ -142,38 +169,93 @@ export default function Newcardmake() {
 
   // 入力中にブラウザを閉じたりリロードすると入力が失われるため、未保存の変更がある場合に確認ダイアログを出す
   useEffect(() => {
-  const handler = (e: BeforeUnloadEvent) => {
-    // 入力が何かあれば警告
-    const isDirty = Object.values(formData).some(v => v !== '');
+    const handler = (e: BeforeUnloadEvent) => {
+      // 入力が何かあれば警告
+      const isDirty = Object.values(formData).some(v => v !== '' && v !== null);
 
-    if (!isDirty) return;
+      if (!isDirty) return;
 
-    e.preventDefault();
-    e.returnValue = '';
-  };
+      e.preventDefault();
+      e.returnValue = '';
+    };
 
-  window.addEventListener('beforeunload', handler);
-  return () => window.removeEventListener('beforeunload', handler);
-}, [formData]);
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [formData]);
   const [activeTab, setActiveTab] = useState<'basic' | 'effect'>('basic');
+  //raceを複数選択可能に
+  //raceをdbからデータを受け取り、optionとして利用可能なようにする
+  //　react-selectのCreatableSelectを利用して、既存の種族から選択するか、新しい種族を追加できるようにする
+  //検索機能も忘れず
+  const [races, setraces] = useState<RaceOption[]>([]);
 
-  // 入力変更を一元管理するハンドラ
-  // input/textarea/select の name 属性をキーとして formData を更新するシンプルな実装
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+  // Backend から race データを取得
+  useEffect(() => {
+    const fetchRaces = async () => {
+      try {
+        const response = await fetch('http://localhost:3000/deckmake/races', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
 
-  // フォーム送信時の処理（現在はデバッグ出力のみ）
-  // 実運用ではここでバリデーション→API送信などを行います。
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Card Data:', formData);
-    console.log('Effects AST:', effects);
-    // 送信処理はここに記載
+        if (!response.ok) {
+          throw new Error('Failed to fetch races');
+        }
+
+        const data = await response.json();
+        console.log("YEAR!")
+        // Backend から返ってきた races を RaceOption 形式に変換
+        if (data.races && Array.isArray(data.races)) {
+          const raceOptions: RaceOption[] = data.races.map((race: { id: number; name: string }) => ({
+            value: race.id.toString(),
+            label: race.name,
+          }));
+          setraces(raceOptions);
+        }
+      } catch (error) {
+        console.error('Error fetching races:', error);
+        // エラー時はデフォルト値を使用
+        setraces([]);
+      }
+    };
+
+    fetchRaces();
+  }, []);
+      
+      
+  // フォーム送信時の処理
+  const onSubmit: SubmitHandler<FormData> = async (data) => {
+    const payload = {
+      ...data,
+      race: data.race?.value || '',
+      effects,
+    };
+
+    try {
+      console.log("テシｔｐ")
+      const res = await axios.post(
+        'http://localhost:3000/deckmake/card/create',
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!res.data.success) {
+        throw new Error('保存失敗');
+      }
+
+      console.log(res.data);
+      alert('保存成功');
+      reset();
+    } catch (err) {
+      console.error(err);
+      alert('保存失敗');
+    }
   };
 
   return (
@@ -204,7 +286,7 @@ export default function Newcardmake() {
                 <div className="text-xs space-y-1">
                   <p>タイプ: {formData.cardType || '-'}</p>
                   <p>レベル: {formData.level || '-'}</p>
-                  <p>種族: {formData.race || '-'}</p>
+                  <p>種族: {formData.race ? formData.race.label : '-'}</p>
                   <p>パワー: {formData.power || '-'}</p>
                 </div>
               </div>
@@ -241,7 +323,7 @@ export default function Newcardmake() {
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* 基本情報タブ */}
             {activeTab === 'basic' && (
               <div className="space-y-4">
@@ -250,9 +332,7 @@ export default function Newcardmake() {
                   <label className="block text-sm font-semibold mb-2">カード名</label>
                   <input
                     type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
+                    {...register('name')}
                     placeholder="カードの名前を入力"
                     className="w-full px-4 py-2 border-2 border-gray-300 rounded focus:outline-none focus:border-blue-500"
                   />
@@ -263,9 +343,7 @@ export default function Newcardmake() {
                   <label className="block text-sm font-semibold mb-2">画像URL</label>
                   <input
                     type="text"
-                    name="imageUrl"
-                    value={formData.imageUrl}
-                    onChange={handleInputChange}
+                    {...register('imageUrl')}
                     placeholder="https://example.com/image.png"
                     className="w-full px-4 py-2 border-2 border-gray-300 rounded focus:outline-none focus:border-blue-500"
                   />
@@ -275,9 +353,7 @@ export default function Newcardmake() {
                   <div>
                     <label className="block text-sm font-semibold mb-2">カード種類</label>
                     <select
-                      name="cardType"
-                      value={formData.cardType}
-                      onChange={handleInputChange}
+                      {...register('cardType')}
                       className="w-full px-4 py-2 border-2 border-gray-300 rounded focus:outline-none focus:border-blue-500">
                         <option value="character">キャラクター</option>
                         <option value="spell">スペル</option>
@@ -290,34 +366,29 @@ export default function Newcardmake() {
                     <label className="block text-sm font-semibold mb-2">レベル</label>
                     <input
                       type="number"
-                      name="level"
-                      value={formData.level}
-                      onChange={handleInputChange}
+                      {...register('level')}
                       placeholder="1-12"
                       min="1"
                       max="12"
-                      disabled={formData.cardType !== 'monster'}
+                      disabled={formData.cardType !== 'character'}
                       className={`w-full px-4 py-2 border-2 rounded focus:outline-none focus:border-blue-500 ${
-                        formData.cardType !== 'monster'
+                        formData.cardType !== 'character'
                           ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
                           : 'border-gray-300'
                       }`}
                     />
                   </div>
 
-                  {/* 攻撃力 */}
+                  {/* パワー */}
                   <div>
-                    <label className="block text-sm font-semibold mb-2">攻撃力</label>
+                    <label className="block text-sm font-semibold mb-2">パワー</label>
                     <input
                       type="number"
-                      name="power"
-                      value={formData.power}
-                      onChange={handleInputChange}
-                      placeholder="0-9999"
+                      {...register('power')}
                       min="0"
-                      disabled={formData.cardType !== 'monster'}
+                      disabled={formData.cardType !== 'character'}
                       className={`w-full px-4 py-2 border-2 rounded focus:outline-none focus:border-blue-500 ${
-                        formData.cardType !== 'monster'
+                        formData.cardType !== 'character'
                           ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
                           : 'border-gray-300'
                       }`}
@@ -328,13 +399,28 @@ export default function Newcardmake() {
                 {/* 種族 */}
                 <div>
                   <label className="block text-sm font-semibold mb-2">種族</label>
-                  <input
-                    type="text"
+                  <Controller
                     name="race"
-                    value={formData.race}
-                    onChange={handleInputChange}
-                    placeholder="例: ドラゴン, 戦士, 魔法使い"
-                    className="w-full px-4 py-2 border-2 border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                    control={control}
+                    render={({ field }) => (
+                      <CreatableSelect
+                        {...field}
+                        options={races}
+                        onChange={(newValue) => {
+                          field.onChange(newValue);
+                        }}
+                        onCreateOption={(inputValue) => {
+                          const newOption = {
+                            value: inputValue,
+                            label: inputValue,
+                          };
+                          setraces(prev => [...prev, newOption]);
+                          field.onChange(newOption);
+                        }}
+                        placeholder="種族を選択"
+                        isClearable
+                      />
+                    )}
                   />
                 </div>
 
@@ -342,9 +428,7 @@ export default function Newcardmake() {
                 <div>
                   <label className="block text-sm font-semibold mb-2">説明文</label>
                   <textarea
-                    name="flavortext"
-                    value={formData.flavortext}
-                    onChange={handleInputChange}
+                    {...register('flavortext')}
                     placeholder="カードの説明を入力"
                     rows={4}
                     className="w-full px-4 py-2 border-2 border-gray-300 rounded focus:outline-none focus:border-blue-500"
@@ -525,7 +609,8 @@ export default function Newcardmake() {
                   カードを保存
                 </button>
               <button
-                type="reset"
+                type="button"
+                onClick={() => reset()}
                 className="px-6 py-3 border-2 border-gray-400 rounded font-semibold transition-all hover:bg-gray-100"
               >
                 リセット
