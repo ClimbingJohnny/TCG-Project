@@ -10,9 +10,9 @@ generator client {
   output   = "../generated/prisma"
 }
 
-datasource db {
-  provider = "sqlite"
-}
+// datasource db {
+//   provider = "postgresql"
+// }
 
 model User {
   id    BigInt @id @default(autoincrement())
@@ -52,7 +52,7 @@ model Card {
   id        BigInt @id @default(autoincrement())
   name      String
   cardtype Cardtype //カードの種類（キャラクター・スペル・トラップ）
-  race_id BigInt // 種族ID
+  race_id BigInt[] // 種族ID
   race Race @relation(fields: [race_id], references: [id])
 
   power BigInt?
@@ -83,6 +83,7 @@ model Pack {
   id BigInt @id @default(autoincrement())
   name String @unique
   cards Card[]
+  Closed Boolean @default(false)
 }
 //中間テーブル　Deck_Cardは、DeckとCardの多対多の関係を表しています。deck_Idとcard_Idの組み合わせが一意であることを保証するために、@@id([deck_Id, card_Id])が使用されています。また、onDelete: Cascadeオプションにより、親レコードが削除されたときに関連する子レコードも自動的に削除されるようになっています。
 model Deck_Card {
