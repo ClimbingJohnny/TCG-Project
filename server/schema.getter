@@ -3,10 +3,13 @@
 
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
+
+//リレーションの方法　fieldsはこちら側が現在参照しようとしている外部キーの値で、referencesはその値がどこにあるかを示す外部の主キー
 generator client {
   provider = "prisma-client"
-  output   = "../generated/prisma"
+  // output   = "../generated/prisma"
 }
+
 datasource db {
   provider = "postgresql"
 }
@@ -59,7 +62,8 @@ model Card {
   flavorText String?
 
   regulation Int @default(0) 
-  pack_id BigInt[] //リレーションは設けない　bigintをbigint[]の形で撮り、外部キーを接続すると不具合が発生するため
+  pack_id BigInt
+  pack Pack @relation(fields:[pack_id], references:[id])
   created_At DateTime @default(now())
 
   deck_Card Deck_Card[]
@@ -78,6 +82,7 @@ model Race {
 model Pack {
   id BigInt @id @default(autoincrement())
   name String @unique
+  cards Card[]
   Closed Boolean @default(false)
 }
 //中間テーブル　Deck_Cardは、DeckとCardの多対多の関係を表しています。deck_Idとcard_Idの組み合わせが一意であることを保証するために、@@id([deck_Id, card_Id])が使用されています。また、onDelete: Cascadeオプションにより、親レコードが削除されたときに関連する子レコードも自動的に削除されるようになっています。
