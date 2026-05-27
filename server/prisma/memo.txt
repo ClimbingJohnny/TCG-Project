@@ -1,0 +1,41 @@
+prisma上でのリレーションの設定方法
+
+（例としてこの形を取ります）
+model user{
+    id Bigint
+    name
+}
+model post{
+    id Bigint
+    description
+}
+
+１　一対一
+外部キー側に@uniqueをつける。
+model user{
+    id Bigint
+    name
+    post Post?
+}
+model post{
+    id Bigint
+    description nvarchar
+    userID Bigint @unique
+    user User @relation(fields:[userID],references:[id])
+}
+２　一体多
+親が配列、個が外部キーとrelationを持つ
+
+model user{
+    id Bigint
+    name
+    post Post[]
+}
+model post{
+    id Bigint
+    description nvarchar
+    userID Bigint @unique
+    user User @relation(fields:[userID],references:[id])
+}
+3　多対多
+一旦チュウカンテーブルを作り、そこに双方が親で入る

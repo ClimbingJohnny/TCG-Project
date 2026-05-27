@@ -24,6 +24,9 @@ model User {
   joined_At DateTime @default(now())
   created_At DateTime @default(now())
   updated_At DateTime @updatedAt 
+
+  Pack_artist Pack[]
+  Card_artist Card[]
 }
 
 model Deck {
@@ -49,9 +52,8 @@ model Card {
   id        BigInt @id @default(autoincrement())
   name      String
   cardtype Cardtype //カードの種類（キャラクター・スペル・トラップ）
-  race_id BigInt // 種族ID
-  race Race @relation(fields: [race_id], references: [id])
-
+  // 種族・パックは中間テーブルで管理するため、ID配列は持たせません
+  Race Card_Race[]
   power BigInt?
   level Int?
   effect Json? 
@@ -59,9 +61,10 @@ model Card {
   flavorText String?
 
   regulation Int @default(0) 
-  pack_id BigInt[] //リレーションは設けない　bigintをbigint[]の形で撮り、外部キーを接続すると不具合が発生するため
+  card_Pack Card_Pack[]
   created_At DateTime @default(now())
-
+  made_by BigInt
+  artist User @relation(fields: [made_by], references: [id])
   deck_Card Deck_Card[]
 
   @@index([name])
@@ -72,13 +75,16 @@ model Race {
   id   BigInt    @id @default(autoincrement())
   name String @unique
 
-  cards Card[]
+  cards Card_Race[]
 }
-//パックの観念の追加
+//パック
 model Pack {
   id BigInt @id @default(autoincrement())
   name String @unique
+  cards Card_Pack[]
   Closed Boolean @default(false)
+  made_by BigInt //作成者ID
+  artist User @relation(fields: [made_by], references: [id])
 }
 //中間テーブル　Deck_Cardは、DeckとCardの多対多の関係を表しています。deck_Idとcard_Idの組み合わせが一意であることを保証するために、@@id([deck_Id, card_Id])が使用されています。また、onDelete: Cascadeオプションにより、親レコードが削除されたときに関連する子レコードも自動的に削除されるようになっています。
 model Deck_Card {
@@ -91,6 +97,24 @@ model Deck_Card {
   card Card @relation(fields: [card_Id], references: [id], onDelete: Cascade)
 //onDelete:Cascadeとは、親レコードが削除されたときに子レコードも自動的に削除されることを意味します。これにより、データの整合性が保たれます。
   @@id([deck_Id, card_Id])//複合キー
+}
+model Card_Pack {
+  card_Id BigInt
+  pack_Id BigInt
+
+  card Card @relation(fields: [card_Id], references: [id], onDelete: Cascade)
+  pack Pack @relation(fields: [pack_Id], references: [id], onDelete: Cascade)
+
+  @@id([card_Id, pack_Id])
+}
+model Card_Race{
+  card_Id BigInt
+  race_Id BigInt
+
+  card Card @relation(fields: [card_Id], references: [id], onDelete: Cascade)
+  race Race @relation(fields: [race_Id], references: [id], onDelete: Cascade)
+
+  @@id([card_Id, race_Id])
 }
 //対戦履歴を保存するテーブル
 model History {
