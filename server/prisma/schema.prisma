@@ -16,6 +16,8 @@ model User {
   name  String @unique
   password String
   deck Deck[]
+  cards Card[]
+  packs Pack[]
   historyAsUser1 History[] @relation("User1")
   historyAsUser2 History[] @relation("User2")
 
@@ -23,10 +25,7 @@ model User {
 
   joined_At DateTime @default(now())
   created_At DateTime @default(now())
-  updated_At DateTime @updatedAt 
-
-  Pack_artist Pack[]
-  Card_artist Card[]
+  updated_At DateTime @updatedAt
 }
 
 model Deck {
@@ -38,8 +37,7 @@ model Deck {
   cards   Deck_Card[]
 
   @@index([userId])
-  @@index([userId, name])
-
+  @@unique([userId, name])
 }
 
 enum Cardtype{
@@ -50,7 +48,7 @@ enum Cardtype{
 
 model Card {
   id        BigInt @id @default(autoincrement())
-  name      String
+  name      String @unique
   cardtype Cardtype //カードの種類（キャラクター・スペル・トラップ）
   // 種族・パックは中間テーブルで管理するため、ID配列は持たせません
   Race Card_Race[]
@@ -65,7 +63,7 @@ model Card {
   created_At DateTime @default(now())
   made_by BigInt
   artist User @relation(fields: [made_by], references: [id])
-  deck_Card Deck_Card[]
+  deck Deck_Card[]
 
   @@index([name])
   @@index([cardtype])
@@ -121,13 +119,13 @@ model History {
   id BigInt @id @default(autoincrement())
   user_1_Id BigInt
   user_2_Id BigInt
-  deck_1_ID BigInt @unique
-  deck_2_ID BigInt @unique
+  deck_1_ID BigInt
+  deck_2_ID BigInt
 
-  deck_1 HistoryDeck @relation("Deck1", fields: [deck_1_ID], references: [id])
-  deck_2 HistoryDeck @relation("Deck2", fields: [deck_2_ID], references: [id])
-  user_1 User @relation("User1", fields: [user_1_Id], references: [id])
-  user_2 User @relation("User2", fields: [user_2_Id], references: [id])
+  deck_1 HistoryDeck @relation("Deck1", fields: [deck_1_ID], references: [id], onDelete: Cascade)
+  deck_2 HistoryDeck @relation("Deck2", fields: [deck_2_ID], references: [id], onDelete: Cascade)
+  user_1 User @relation("User1", fields: [user_1_Id], references: [id], onDelete: Cascade)
+  user_2 User @relation("User2", fields: [user_2_Id], references: [id], onDelete: Cascade)
 
   log Json
   created_At DateTime @default(now())
@@ -135,6 +133,6 @@ model History {
 
 model HistoryDeck{
   id BigInt @id @default(autoincrement())
-  history1 History? @relation("Deck1")
-  history2 History? @relation("Deck2")
+  history1 History[] @relation("Deck1")
+  history2 History[] @relation("Deck2")
 }

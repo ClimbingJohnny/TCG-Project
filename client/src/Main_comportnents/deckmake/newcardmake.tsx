@@ -234,7 +234,7 @@ export default function Newcardmake() {
     };
 
     try {
-      console.log("テシｔｐ")
+      console.log("テスト")
       const res = await axios.post(
         'http://localhost:3000/deckmake/card/create',
         payload,

@@ -31,6 +31,7 @@ function Login_register({ onAuthSuccess }: Props) {
   };
 
   // フォーム管理
+  // 例：register = useForm.register のようなもの
   const { register, handleSubmit, formState: { errors }, reset } = useForm<userData>();
 
   // モード管理

@@ -1,3 +1,4 @@
 {
-    "commentTranslate.targetLanguage": "ja"
+    "commentTranslate.targetLanguage": "ja",
+    "commentTranslate.hover.enabled": true
 }

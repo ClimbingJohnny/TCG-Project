@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { prisma } from '../../../lib/prisma.ts';
+import { prisma } from '../../../lib/prisma';
 
 const SECRET_KEY = 'MysecretKey';
 
@@ -45,7 +45,7 @@ export const login = async (req: Request, res: Response) => {
     // 4.3 ユーザーに通知
     res.json({
       message: 'ログイン成功',
-      userId: user.id,
+      userId: user.id.toString(), // BigIntを文字列に変換
       username: user.name
     });
     console.log(user.name);
@@ -60,26 +60,57 @@ export const login = async (req: Request, res: Response) => {
 export const register = async (req: Request, res: Response) => {
   try {
     console.log('ユーザー登録処理開始');
+    console.log('リクエストボディ:', req.body);
+    console.log('username:', req.body.username, '型:', typeof req.body.username);
+    console.log('password:', req.body.password, '型:', typeof req.body.password);
 
     //ユーザー名が空でないかの確認
-    if (!req.body.username || req.body.username.trim() === '') {
+    if (!req.body.username) {
+      console.log('エラー: usernameが存在しません');
       return res.status(400).send('ユーザー名は必須です。');
     }
-    if (!req.body.password || req.body.password.trim() === '') {
+    
+    if (typeof req.body.username !== 'string') {
+      console.log('エラー: usernameが文字列ではありません');
+      return res.status(400).send('ユーザー名は文字列である必要があります。');
+    }
+    
+    if (req.body.username.trim() === '') {
+      console.log('エラー: ユーザー名が空です');
+      return res.status(400).send('ユーザー名は必須です。');
+    }
+    
+    if (!req.body.password) {
+      console.log('エラー: passwordが存在しません');
       return res.status(400).send('パスワードは必須です。');
     }
+    
+    if (typeof req.body.password !== 'string') {
+      console.log('エラー: passwordが文字列ではありません');
+      return res.status(400).send('パスワードは文字列である必要があります。');
+    }
+    
+    if (req.body.password.trim() === '') {
+      console.log('エラー: パスワードが空です');
+      return res.status(400).send('パスワードは必須です。');
+    }
+    
+    console.log('検証OK - ユーザー存在確認開始');
     // ユーザーが存在するかどうかを確認
     const existingUser = await prisma.user.findUnique({
       where: { name: req.body.username }
     });
 
     if (existingUser) {
+      console.log('エラー: そのユーザーは既に存在しています');
       return res.status(400).send('そのデータは既に存在しています。');
     }
 
+    console.log('既存ユーザーなし - パスワードハッシュ化開始');
     // パスワードをハッシュ化
     const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
+    console.log('ユーザー作成開始');
     // ユーザーを作成
     const user = await prisma.user.create({
       data: {
@@ -88,13 +119,14 @@ export const register = async (req: Request, res: Response) => {
       }
     });
 
+    console.log('ユーザー作成成功:', user.name);
     res.json({
       message: '成功です。',
-      userId: user.id,
-      username: user.name,
-      user: user
+      userId: user.id.toString(), // BigIntを文字列に変換
+      username: user.name
     });
   } catch (err) {
+    console.error('エラー発生:', err);
     res.status(500).send(err);
   }
 };
